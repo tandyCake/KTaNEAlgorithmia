@@ -9,8 +9,6 @@ using Rnd = UnityEngine.Random;
 
 public class AlgorithmiaScript : MonoBehaviour
 {
-
-
     public KMBombInfo Bomb;
     public KMAudio Audio;
     public KMBombModule Module;
@@ -24,6 +22,7 @@ public class AlgorithmiaScript : MonoBehaviour
     static int moduleIdCounter = 1;
     int moduleId;
     private bool moduleSolved;
+    private bool moduleDone;
 
     private LightColors mazeAlg;
     private Seed seed;
@@ -197,6 +196,7 @@ public class AlgorithmiaScript : MonoBehaviour
         StartCoroutine(PlaySolveNoise());
         yield return new WaitUntil(() => solveAnimBulbsOn.All(x => x));
         Module.HandlePass();
+        moduleDone = true;
         yield return new WaitForSeconds(1f);
         ToggleEverything();
     }
@@ -347,7 +347,7 @@ public class AlgorithmiaScript : MonoBehaviour
         Debug.Log(FindPath(currentPos, goalPos));
         foreach (char ch in FindPath(currentPos, goalPos))
             yield return Press(dirButtons[(int)dirLookup[ch]], 0.1f);
-        while (!moduleSolved)
+        while (!moduleDone)
             yield return true;
     }
 }
