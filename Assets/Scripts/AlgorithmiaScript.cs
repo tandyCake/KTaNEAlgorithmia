@@ -22,7 +22,7 @@ public class AlgorithmiaScript : MonoBehaviour
     static int moduleIdCounter = 1;
     int moduleId;
     private bool moduleSolved;
-    private bool moduleDone;
+    private bool lightTurnedGreen;
 
     private LightColors mazeAlg;
     private Seed seed;
@@ -196,7 +196,7 @@ public class AlgorithmiaScript : MonoBehaviour
         StartCoroutine(PlaySolveNoise());
         yield return new WaitUntil(() => solveAnimBulbsOn.All(x => x));
         Module.HandlePass();
-        moduleDone = true;
+        lightTurnedGreen = true;
         yield return new WaitForSeconds(1f);
         ToggleEverything();
     }
@@ -307,6 +307,7 @@ public class AlgorithmiaScript : MonoBehaviour
     };
     IEnumerator ProcessTwitchCommand(string command)
     {
+        Debug.Log(FindPath(currentPos, goalPos));
         command = command.Trim().ToUpperInvariant();
         if (command.EqualsAny("COLORBLIND", "COLOURBLIND", "COLOR-BLIND", "COLOUR-BLIND", "CB"))
         {
@@ -315,18 +316,30 @@ public class AlgorithmiaScript : MonoBehaviour
         }
         else
         {
+            bool willStrike = false;
+            bool willSolve = true;
+
             Match m = Regex.Match(command, @"^MOVE\s+([ULDR]+)$");
             if (m.Success)
             {
-                Debug.Log(m.Groups[1].Value);
-                int pos = currentPos;
+                int virtualPos = currentPos;
                 List<Dir> presses = new List<Dir>();
                 foreach (char ch in m.Groups[1].Value)
                 {
                     Dir d = dirLookup[ch];
-                    if (Data.GetMovements(pos).ContainsKey(d))
+                    var movementsFromHere = Data.GetMovements(virtualPos);
+                    if (movementsFromHere.ContainsKey(d))
                     {
-                        pos = Data.GetMovements(pos)[d];
+                        int target = movementsFromHere[d];
+                        if (!generatedPaths[virtualPos].Contains(ch)) {
+                            Debug.Log("WILL STRIKE");
+                            willStrike = true;
+                            presses.Add(d);
+                            break;
+                        }
+                        if (target == goalPos)
+                            willSolve = true;
+                        virtualPos  = target;
                         presses.Add(d);
                     }
                     else
@@ -338,6 +351,10 @@ public class AlgorithmiaScript : MonoBehaviour
                 yield return null;
                 foreach (Dir d in presses)
                     yield return Press(dirButtons[(int)d], 0.1f);
+                if (willStrike)
+                    yield return "strike";
+                else if (willSolve)
+                    yield return "solve";
             }
         }
     }
@@ -347,7 +364,7 @@ public class AlgorithmiaScript : MonoBehaviour
         Debug.Log(FindPath(currentPos, goalPos));
         foreach (char ch in FindPath(currentPos, goalPos))
             yield return Press(dirButtons[(int)dirLookup[ch]], 0.1f);
-        while (!moduleDone)
+        while (!lightTurnedGreen)
             yield return true;
     }
 }
